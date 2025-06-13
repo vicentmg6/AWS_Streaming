@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SportZone - Tu tienda de deportes</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            background: #f4f4f4;
+            color: #333;
+        }
+
+        header {
+            background: linear-gradient(90deg, #0052D4, #4364F7, #6FB1FC);
+            color: white;
+            padding: 1rem 2rem;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 2.5rem;
+        }
+
+        nav {
+            margin-top: 10px;
+        }
+
+        nav a {
+            margin: 0 15px;
+            text-decoration: none;
+            color: #fff;
+            font-weight: bold;
+            transition: color 0.3s;
+        }
+
+        nav a:hover {
+            color: #ffd700;
+        }
+
+        .hero {
+            background: url('https://images.unsplash.com/photo-1599058917211-9efc1bc90444') no-repeat center center/cover;
+            height: 400px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            text-shadow: 2px 2px 8px rgba(0,0,0,0.7);
+        }
+
+        .hero h2 {
+            font-size: 3rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 50px auto;
+            padding: 0 20px;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 2rem;
+            margin-bottom: 30px;
+        }
+
+        .categories, .products {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+            transition: transform 0.3s;
+            text-align: center;
+            padding: 1rem;
+        }
+
+        .card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+        }
+
+        footer {
+            background: #333;
+            color: #fff;
+            text-align: center;
+            padding: 1rem;
+            margin-top: 50px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>SportZone</h1>
+        <nav>
+            <a href="#">Inicio</a>
+            <a href="#">Categorías</a>
+            <a href="#">Ofertas</a>
+            <a href="#">Contacto</a>
+        </nav>
+    </header>
+
+    <div class="hero">
+        <h2>Todo para tu deporte favorito</h2>
+    </div>
+
+    <div class="container">
+        <div class="section-title">Categorías</div>
+        <div class="categories">
+            <div class="card">
+                <img src="https://images.unsplash.com/photo-1542744173-8e7e53415bb0" alt="Running">
+                <h3>Running</h3>
+            </div>
+            <div class="card">
+                <img src="https://images.unsplash.com/photo-1584466977771-dc2480ad0323" alt="Fitness">
+                <h3>Fitness</h3>
+            </div>
+            <div class="card">
+                <img src="https://images.unsplash.com/photo-1579980714214-d5f9c6d5ec58" alt="Ciclismo">
+                <h3>Ciclismo</h3>
+            </div>
+            <div class="card">
+                <img src="https://images.unsplash.com/photo-1593341646787-f7b7d310b29b" alt="Montaña">
+                <h3>Montaña</h3>
+            </div>
+        </div>
+
+        <div class="section-title">Productos Destacados</div>
+        <div class="products">
+            <div class="card">
+                <img src="https://images.unsplash.com/photo-1600181953659-2f3b80d2f4dc" alt="Zapatillas Running">
+                <h3>Zapatillas Running Pro</h3>
+                <p>119,99 €</p>
+            </div>
+            <div class="card">
+                <img src="https://images.unsplash.com/photo-1584466977771-dc2480ad0323" alt="Pesas Ajustables">
+                <h3>Pesas Ajustables 20kg</h3>
+                <p>89,99 €</p>
+            </div>
+            <div class="card">
+                <img src="https://images.unsplash.com/photo-1605296867304-46d5465a13f1" alt="Casco Ciclismo">
+                <h3>Casco Ciclismo Pro</h3>
+                <p>59,99 €</p>
+            </div>
+            <div class="card">
+                <img src="https://images.unsplash.com/photo-1611151304989-8c80c5198f47" alt="Mochila de Montaña">
+                <h3>Mochila de Montaña 40L</h3>
+                <p>74,99 €</p>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        &copy; 2025 SportZone - Todos los derechos reservados.
+    </footer>
+</body>
+</html>

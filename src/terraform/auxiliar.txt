@@ -1,0 +1,1 @@
+aws s3api create-bucket --bucket pnieto-terraform-state --region eu-central-1 --create-bucket-configuration LocationConstraint=eu-central-1
