@@ -7,6 +7,241 @@ terraform {
 }
 
 
-resource "aws_ecr_repository" "ecr_api" {
+resource "aws_ecr_repository" "api_repository" {
   name                 = "ecr_api"
+  force_delete =  true
+
+  image_scanning_configuration {
+    scan_on_push = false
+  }
+}
+
+
+
+resource "aws_iam_role" "ecr_push_role" {
+  name = "ecr-push-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Action = "sts:AssumeRole",
+        Effect = "Allow",
+        Principal = {
+          Service = "ecs-tasks.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "ecr_push_policy" {
+  name = "ecr-push-policy"
+  role = aws_iam_role.ecr_push_role.id
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Action = [
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchGetImage",
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:PutImage",
+          "ecr:InitiateLayerUpload",
+          "ecr:UploadLayerPart",
+          "ecr:CompleteLayerUpload"
+        ],
+        Effect = "Allow",
+        Resource = aws_ecr_repository.api_repository.arn
+      }
+    ]
+  })
+}
+
+resource "null_resource" "docker_build_and_push" {
+  triggers = {
+    always_run = timestamp()
+  }
+
+  provisioner "local-exec" {
+    command = <<EOT
+aws ecr get-login-password --region eu-central-1 | docker login --username AWS --password-stdin ${aws_ecr_repository.api_repository.repository_url} |  docker buildx build --platform linux/amd64 -t my-api-repo ../api/docker | docker tag my-api-repo:latest ${aws_ecr_repository.api_repository.repository_url}:latest | docker push ${aws_ecr_repository.api_repository.repository_url}:latest
+EOT
+  }
+
+  depends_on = [aws_ecr_repository.api_repository]
+}
+
+
+
+
+
+data "aws_ecr_image" "my_image" {
+  repository_name = aws_ecr_repository.api_repository.name
+  image_tag       = "latest"
+  depends_on      = [null_resource.docker_build_and_push]
+}
+
+resource "null_resource" "trigger_apprunner_deployment" {
+  triggers = {
+    image_digest = "${data.aws_ecr_image.my_image.image_digest}"
+  }
+  depends_on = [null_resource.docker_build_and_push]
+}
+
+resource "aws_iam_role" "app_runner_role" {
+  name = "app-runner-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Principal = {
+          Service = "build.apprunner.amazonaws.com"
+        },
+        Action = "sts:AssumeRole"
+      },
+      {
+        Effect: "Allow",
+        Principal: {
+          Service: "tasks.apprunner.amazonaws.com"
+        },
+        Action: "sts:AssumeRole"
+    }
+    ]
+  })
+}
+
+
+
+resource "aws_iam_role_policy" "app_runner_policy" {
+  name = "app-runner-policy"
+  role = aws_iam_role.app_runner_role.id
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchGetImage",
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:GetAuthorizationToken",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ],
+        Resource = "*"
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "secretsmanager:GetSecretValue",
+          "kms:Decrypt*"
+        ],
+        Resource = "*"
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "sns:*",
+          "sqs:*"
+        ],
+        Resource = "*"
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "rds:*"
+        ],
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_vpc" "main_vpc" {
+  cidr_block = "10.0.0.0/16"
+}
+
+resource "aws_default_security_group" "main_sg" {
+  vpc_id = aws_vpc.main_vpc.id
+
+  ingress {
+    protocol  = -1
+    self      = true
+    from_port = 0
+    to_port   = 0
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_subnet" "subnet_priva" {
+  vpc_id     = aws_vpc.main_vpc.id
+  cidr_block = "10.0.1.0/24"
+
+  tags = {
+    Name = "Main"
+  }
+}
+
+resource "aws_subnet" "main_subnet" {
+  vpc_id     = aws_vpc.main_vpc.id
+  cidr_block = "10.0.1.0/24"
+
+  tags = {
+    Name = "Main"
+  }
+}
+
+resource "aws_apprunner_vpc_connector" "connector" {
+  vpc_connector_name = "name"
+  subnets            = [aws_subnet.main_subnet.id]
+  security_groups    = [aws_default_security_group.main_sg.id]
+}
+
+resource "aws_apprunner_service" "my_service" {
+  service_name = "my-app-runner-service"
+  source_configuration {
+    authentication_configuration {
+      access_role_arn = aws_iam_role.app_runner_role.arn
+    }
+    auto_deployments_enabled = true
+    image_repository {
+      image_identifier      = "${aws_ecr_repository.api_repository.repository_url}:latest"
+      image_repository_type = "ECR"
+      image_configuration {
+        port = "5000"
+        runtime_environment_variables = {
+          # "RDS_HOST" = var.db_host
+          # "RDS_USER" = var.rds_root_user
+          # "RDS_PASS" = var.rds_root_pass
+          # "RDS_DB"   = var.rds_db
+        }
+      }
+    }
+  }
+  instance_configuration {
+    instance_role_arn = aws_iam_role.app_runner_role.arn
+    cpu = "1024"
+    memory = "2048"    
+  }
+  network_configuration {
+    egress_configuration {
+      egress_type = "VPC"
+      vpc_connector_arn = aws_apprunner_vpc_connector.connector.arn
+    }
+  }
+  lifecycle {
+    create_before_destroy = true
+  }
+  depends_on = [ null_resource.docker_build_and_push, aws_iam_role.app_runner_role , aws_iam_role_policy.app_runner_policy] 
+}
+
+resource "aws_cloudwatch_log_group" "app_runner_logs" {
+  name = "/aws/apprunner/my-app-runner-service"
 }
